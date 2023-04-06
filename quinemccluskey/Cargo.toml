@@ -1,0 +1,17 @@
+[package]
+name = "quinemccluskey"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "quinemccluskey"
+crate-type = ["cdylib", "rlib"]
+path = "./src/lib.rs"
+
+[[bin]]
+name = "quinemccluskey_cli"
+path = "./src/main.rs"
+
+[dependencies]
+pyo3 = { version = "0.18.2", features = ["extension-module"] }
+
