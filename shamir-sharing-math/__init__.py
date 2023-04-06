@@ -30,14 +30,8 @@ class Slice(Generic[T]):
         return Slice(self.values, self.start + 1)
 
 
-class Scheme(Enum):
-    SHAMIR = "shamir"
-    COMPLEX = "complex"
-
-
 @dataclass(kw_only=True)
 class Configuration:
-    scheme: Scheme
     modulo: int
     formula: str
     version: int = 1
