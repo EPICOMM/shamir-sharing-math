@@ -17,8 +17,9 @@ threshold = {
 }
 
 brackets = { "(" ~ expression ~ ")" }
+var = { name }
 
-term = { brackets | threshold | name }
+term = { brackets | threshold | var }
 and = { term ~ ("&" ~ term)* }
 or = { and ~ ("|" ~ and)* }
 
@@ -57,30 +58,6 @@ class ParseError(ValueError):
 
 
 Parser = Callable[[Slice], tuple[Any, Slice]]
-
-
-def parse_all(*parsers: list[Parser]) -> Parser:
-    def parse_all(s: Slice) -> tuple[list, Slice]:
-        result = []
-        for p in parsers:
-            res, s = p(s)
-            result.append(res)
-        return result, s
-
-    return parse_all
-
-
-def parse_any(*parsers) -> Parser:
-    def parse_any(s: Slice) -> tuple[list, Slice]:
-        names = []
-        for p in parsers:
-            try:
-                return p(s)
-            except ParseError as e:
-                names.append(e)
-        raise ParseError(" or ".join(names), s)
-
-    return parse_any
 
 
 def skip_ws(s: Slice) -> tuple[str, Slice]:
