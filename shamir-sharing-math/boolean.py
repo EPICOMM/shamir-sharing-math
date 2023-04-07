@@ -1,5 +1,4 @@
 from copy import copy
-from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
@@ -55,7 +54,7 @@ class BooleanNode:
     @classmethod
     def var(cls, name: str) -> "BooleanNode":
         return cls(kind=NodeKind.VAR, name=name)
-    
+
     @classmethod
     def thresh(cls, threshold: int, *children: list["BooleanNode"]) -> "BooleanNode":
         return cls(kind=NodeKind.THRESHOLD, threshold=threshold, children=children)
@@ -84,9 +83,9 @@ class BooleanNode:
 
     def __str__(self) -> str:
         if self.kind == NodeKind.VAR:
-            return str(self.name)
+            return f'`{self.name}`'
         elif self.kind == NodeKind.THRESHOLD:
-            return f'T_{self.threshold}({", ".join(str(i) for i in self.children)})'
+            return f'T{self.threshold}({", ".join(str(i) for i in self.children)})'
         elif self.kind == NodeKind.AND:
             return f'({" & ".join(str(i) for i in self.children)})'
         elif self.kind == NodeKind.OR:

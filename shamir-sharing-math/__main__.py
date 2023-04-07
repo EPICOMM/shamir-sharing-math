@@ -1,6 +1,10 @@
 from .boolean import BooleanNode
+from . import parse
 from . import *
 
+print(parse.parse('T3( (John Doe | 123) & zz, q, w, e)'))
+
+"""
 a = BooleanNode.or_(
     BooleanNode.and_(BooleanNode.var("x"), BooleanNode.var("a")),
     BooleanNode.and_(BooleanNode.var("x"), BooleanNode.var("b")),
@@ -17,3 +21,4 @@ parts = [parts[0], parts[1]]
 print(parts)
 secret = c.restore(parts)
 print('=', secret)
+"""

@@ -15,21 +15,6 @@ class Part:
     values: list[int]
 
 
-@dataclass(frozen=True)
-class Slice(Generic[T]):
-    values: list[T]
-    start: int = 0
-
-    @property
-    def head(self) -> T | None:
-        if self.start >= len(self.values):
-            return None
-        return self.values[self.start]
-
-    def move(self) -> "Slice[T]":
-        return Slice(self.values, self.start + 1)
-
-
 @dataclass(kw_only=True)
 class Configuration:
     modulo: int
