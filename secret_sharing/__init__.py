@@ -22,7 +22,7 @@ class Part:
 
     @classmethod
     def deserialize(cls, s: str) -> "Part":
-        data = json.loads(urlsafe_b64encode(s).decode("utf-8"))
+        data = json.loads(urlsafe_b64decode(s).decode("utf-8"))
         return cls(name=data["name"], values=data["values"])
 
 
@@ -38,7 +38,7 @@ class Configuration:
 
     @classmethod
     def deserialize(cls, s: str) -> "Part":
-        data = json.loads(urlsafe_b64encode(s).decode("utf-8"))
+        data = json.loads(urlsafe_b64decode(s).decode("utf-8"))
         return cls(modulo=data["modulo"], formula=data["formula"], version=data["version"])
 
     def make_formula(self) -> BooleanNode:
