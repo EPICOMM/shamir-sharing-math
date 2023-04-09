@@ -76,7 +76,7 @@ class BooleanNode:
         return self._name
 
     @property
-    def threshold(self) -> str:
+    def threshold(self) -> int:
         if self._kind != NodeKind.THRESHOLD:
             raise ValueError("only THRESHOLD have threshold")
         return self._threshold
