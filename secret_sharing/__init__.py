@@ -6,6 +6,7 @@ from base64 import urlsafe_b64decode, urlsafe_b64encode
 
 from .parse import parse
 from .boolean import BooleanNode, NodeKind
+import secrets
 import random
 
 T = TypeVar("T")
@@ -97,7 +98,7 @@ class Configuration:
 class MathBase:
     def __init__(self, conf: Configuration, seed=None) -> None:
         self.conf = conf
-        self._rng = random.Random(seed)
+        self._rng = random.Random(seed) if seed is not None else None
 
     @property
     def mod(self) -> int:
@@ -105,7 +106,10 @@ class MathBase:
 
     def rand(self, n=None) -> int | list[int]:
         if n is None:
-            return self._rng.randint(0, self.mod - 1)
+            if self._rng:
+                return self._rng.randint(0, self.mod - 1)
+            else:
+                return secrets.randbelow(0, self.mod)
         return [self.rand() for _ in range(n)]
 
     def inv(self, n: int) -> int:
