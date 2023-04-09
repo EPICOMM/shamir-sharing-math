@@ -43,13 +43,25 @@ class BooleanNode:
     def or_(cls, *children: list["BooleanNode"]) -> "BooleanNode":
         if len(children) == 1:
             return children[0]
+        flat = []
+        for i in children:
+            if i.kind == NodeKind.OR:
+                flat.extend(i.children)
+            else:
+                flat.append(i)
         return cls(kind=NodeKind.OR, children=children)
 
     @classmethod
     def and_(cls, *children: list["BooleanNode"]) -> "BooleanNode":
         if len(children) == 1:
             return children[0]
-        return cls(kind=NodeKind.AND, children=children)
+        flat = []
+        for i in children:
+            if i.kind == NodeKind.AND:
+                flat.extend(i.children)
+            else:
+                flat.append(i)
+        return cls(kind=NodeKind.AND, children=flat)
 
     @classmethod
     def var(cls, name: str) -> "BooleanNode":
@@ -83,13 +95,40 @@ class BooleanNode:
 
     def __str__(self) -> str:
         if self.kind == NodeKind.VAR:
-            return f'`{self.name}`'
+            return f"{self.name!r}"
         elif self.kind == NodeKind.THRESHOLD:
             return f'T{self.threshold}({", ".join(str(i) for i in self.children)})'
         elif self.kind == NodeKind.AND:
             return f'({" & ".join(str(i) for i in self.children)})'
         elif self.kind == NodeKind.OR:
             return f'({" | ".join(str(i) for i in self.children)})'
+
+    def __repr__(self) -> str:
+        return f"BooleanNode({self})"
+
+    def __eq__(self, other: object) -> bool:
+        if self is other:
+            return True
+        if not isinstance(other, BooleanNode):
+            return False
+        if self.kind != other.kind:
+            return False
+        if self.kind == NodeKind.VAR:
+            return self.name == other.name
+        if self.kind == NodeKind.THRESHOLD:
+            return self.threshold == other.threshold and self.children == other.children
+        if self.kind in (NodeKind.AND, NodeKind.OR):
+            return self.children == other.children
+
+    def __or__(self, other: Any):
+        if not isinstance(other, BooleanNode):
+            raise TypeError(f"unsupported operand type for &: '{type(self)}' and '{type(other)}")
+        return self.or_(self, other)
+
+    def __and__(self, other: Any):
+        if not isinstance(other, BooleanNode):
+            raise TypeError(f"unsupported operand type for &: '{type(self)}' and '{type(other)}")
+        return self.and_(self, other)
 
     def walk(self, f) -> "BooleanNode":
         res = f(copy(self))

@@ -32,14 +32,6 @@ class Configuration:
     formula: str
     version: int = 1
 
-    @property
-    def is_modifiable(self) -> bool:
-        # Only very basic are supported
-        formula = self.make_formula()
-        if formula.kind != NodeKind.THRESHOLD:
-            return False
-        return all(i.kind == NodeKind.VAR for i in formula.children)
-
     def serialize(self) -> str:
         data = {"modulo": self.modulo, "formula": self.formula, "version": self.version}
         return urlsafe_b64encode(json.dumps(data, ensure_ascii=False).encode("utf-8"))
@@ -61,13 +53,15 @@ class Configuration:
 
         return formula.walk(walker)
 
-    def split(self, secret: int) -> list[Part]:
+    def split(self, secret: int, seed=None) -> list[Part]:
         formula = self.make_formula()
         secret %= self.modulo
-        splitted = Splitter(self).split(secret, formula)
-        splitted.sort(key=lambda x: x[0][1])
+        splitter = Splitter(self, seed=seed)
+        splitter.split(secret, formula)
+        split = list(splitter.assigned.items())
+        split.sort(key=lambda x: x[0][1])
         result = {}
-        for key, val in splitted:
+        for key, val in split:
             name, idx = key
             if name not in result:
                 result[name] = Part(name, [])
@@ -85,8 +79,9 @@ class Configuration:
 
 
 class MathBase:
-    def __init__(self, conf: Configuration) -> None:
+    def __init__(self, conf: Configuration, seed=None) -> None:
         self.conf = conf
+        self._rng = random.Random(seed)
 
     @property
     def mod(self) -> int:
@@ -94,7 +89,7 @@ class MathBase:
 
     def rand(self, n=None) -> int | list[int]:
         if n is None:
-            return random.randint(0, self.mod - 1)
+            return self._rng.randint(0, self.mod - 1)
         return [self.rand() for _ in range(n)]
 
     def inv(self, n: int) -> int:
@@ -128,19 +123,15 @@ class MathBase:
 
 
 class Splitter(MathBase):
-    def __init__(self, conf: Configuration, assigned: dict[Any, int]) -> None:
-        super().__init__(conf)
-        self.assigned = {}
+    def __init__(self, conf: Configuration, assigned: dict[Any, int] = None, **kwargs) -> None:
+        super().__init__(conf, **kwargs)
+        self.assigned = assigned or {}
 
     def _assign(self, key: Any, val: int):
         if key in self.assigned and self.assigned[key] != val:
             raise Exception(f"can't assign new value to {key}")
         self.assigned[key] = val
         return val
-
-    def _try_restore_poly(self, f: BooleanNode) -> list[int] | None:
-        restorer = Restorer(self.conf, self.assigned)
-        return restorer.restore(f)
 
     def _try_restore_poly(self, f: BooleanNode) -> list[int] | None:
         restorer = Restorer(self.conf, self.assigned)
@@ -160,7 +151,7 @@ class Splitter(MathBase):
             return self.split(secret, f)
 
         k = f.threshold
-        evaluated = self._try_restore_poly(secret, f)
+        evaluated = self._try_restore_poly(f)
         if evaluated and evaluated[0] != secret:
             raise Exception("wrong polynom restored")
         if not evaluated:
@@ -181,8 +172,8 @@ class Splitter(MathBase):
 
         assert evaluated[0] == secret
         for n, child in enumerate(f.children, 1):
-            s = evaluated[n]
-            self.split(s, child)
+            subsecret = evaluated[n]
+            self.split(subsecret, child)
 
     def _split_and(self, secret: int, f: BooleanNode):
         free = []
@@ -195,7 +186,13 @@ class Splitter(MathBase):
                 continue
             summ += subsecret
             summ %= self.mod
+            print(f'`{child}` will get {subsecret}')
             self.split(subsecret, child)
+        
+        if not free:
+            if summ != secret:
+                raise Exception('invalid secret restored')
+            return
 
         for child in free[:-1]:
             subsecret = self.rand()
@@ -203,11 +200,11 @@ class Splitter(MathBase):
             summ %= self.mod
             self.split(subsecret, child)
 
-        last = free[-1]
+        child = free[-1]
         subsecret = (secret - summ) % self.mod
         summ += subsecret
         summ %= self.mod
-        self.split(subsecret, last)
+        self.split(subsecret, child)
 
         assert summ == secret
 
@@ -219,11 +216,10 @@ class Splitter(MathBase):
         if f.kind == NodeKind.OR:
             result = []
             for child in f.children:
-                result.extend(self.split(secret, child))
+                self.split(secret, child)
             return result
         if f.kind == NodeKind.AND:
             self._split_and(secret, f)
-        return list(self.assigned.items())
 
 
 class Restorer(MathBase):
