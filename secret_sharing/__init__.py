@@ -53,10 +53,10 @@ class Configuration:
 
         return formula.walk(walker)
 
-    def split(self, secret: int, seed=None) -> list[Part]:
+    def split(self, secret: int, seed=None, assigned=None) -> list[Part]:
         formula = self.make_formula()
         secret %= self.modulo
-        splitter = Splitter(self, seed=seed)
+        splitter = Splitter(self, seed=seed, assigned=assigned)
         splitter.split(secret, formula)
         split = list(splitter.assigned.items())
         split.sort(key=lambda x: x[0][1])
@@ -76,6 +76,22 @@ class Configuration:
             for idx, val in enumerate(part.values, 1):
                 given[(part.name, idx)] = val
         return Restorer(self, given).restore(formula)
+
+    def modify(self, new: "Configuration", parts: list[Part], seed: int = None):
+        secret = self.restore(parts)
+        if not secret:
+            raise ValueError("unable to restore secret")
+        assigned = {}
+        for part in parts:
+            for idx, val in enumerate(part.values, 1):
+                assigned[(part.name, idx)] = val
+        def visitor(f: BooleanNode):
+            if f.kind == NodeKind.VAR:
+                if f.name not in assigned:
+                    assigned[f.name] = None
+        self.make_formula().walk(visitor)
+        print(assigned)
+        return new.split(secret, seed=seed, assigned=assigned)
 
 
 class MathBase:
@@ -127,11 +143,13 @@ class Splitter(MathBase):
         super().__init__(conf, **kwargs)
         self.assigned = assigned or {}
 
-    def _assign(self, key: Any, val: int):
-        if key in self.assigned and self.assigned[key] != val:
-            raise Exception(f"can't assign new value to {key}")
+    def _assign(self, key: Any, val: int, is_random: bool):
+        if is_random and key in self.assigned:
+            if self.assigned[key] is None:
+                raise ValueError(f"can't assign random value to {key}, but required to")
+            else:
+                print(f'changing value for {val}')
         self.assigned[key] = val
-        return val
 
     def _try_restore_poly(self, f: BooleanNode) -> list[int] | None:
         restorer = Restorer(self.conf, self.assigned)
@@ -146,7 +164,7 @@ class Splitter(MathBase):
     def _try_restore(self, f: BooleanNode) -> list[int] | None:
         return Restorer(self.conf, self.assigned).restore(f)
 
-    def _split_threshold(self, secret: int, f: BooleanNode):
+    def _split_threshold(self, secret: int, f: BooleanNode, is_random: bool):
         if f.kind != NodeKind.THRESHOLD:
             return self.split(secret, f)
 
@@ -157,6 +175,7 @@ class Splitter(MathBase):
         if not evaluated:
             # Generate new poly then
             poly = [secret] + self.rand(k - 1)
+            is_random = True
 
             def evaluate(x):
                 res = 0
@@ -173,9 +192,9 @@ class Splitter(MathBase):
         assert evaluated[0] == secret
         for n, child in enumerate(f.children, 1):
             subsecret = evaluated[n]
-            self.split(subsecret, child)
+            self.split(subsecret, child, is_random=is_random)
 
-    def _split_and(self, secret: int, f: BooleanNode):
+    def _split_and(self, secret: int, f: BooleanNode, is_random: bool):
         free = []
         summ = 0
 
@@ -184,42 +203,42 @@ class Splitter(MathBase):
             if not subsecret:
                 free.append(child)
                 continue
+            print(f'{child} = {subsecret}')
             summ += subsecret
             summ %= self.mod
-            print(f'`{child}` will get {subsecret}')
-            self.split(subsecret, child)
-        
+            self.split(subsecret, child, is_random=is_random)
+
         if not free:
             if summ != secret:
-                raise Exception('invalid secret restored')
+                raise Exception(f"invalid secret restored: {summ}")
             return
 
         for child in free[:-1]:
             subsecret = self.rand()
             summ += subsecret
             summ %= self.mod
-            self.split(subsecret, child)
+            self.split(subsecret, child, is_random=True)
 
         child = free[-1]
         subsecret = (secret - summ) % self.mod
         summ += subsecret
         summ %= self.mod
-        self.split(subsecret, child)
+        self.split(subsecret, child, is_random=len(free) > 1)
 
         assert summ == secret
 
-    def split(self, secret: int, f: BooleanNode) -> list[tuple[Any, int]]:
+    def split(self, secret: int, f: BooleanNode, is_random: bool = False) -> list[tuple[Any, int]]:
         if f.kind == NodeKind.VAR:
-            self._assign(f.name, secret)
+            self._assign(f.name, secret, is_random=is_random)
         if f.kind == NodeKind.THRESHOLD:
-            self._split_threshold(secret, f)
+            self._split_threshold(secret, f, is_random=is_random)
         if f.kind == NodeKind.OR:
             result = []
             for child in f.children:
-                self.split(secret, child)
+                self.split(secret, child, is_random=is_random)
             return result
         if f.kind == NodeKind.AND:
-            self._split_and(secret, f)
+            self._split_and(secret, f, is_random=is_random)
 
 
 class Restorer(MathBase):

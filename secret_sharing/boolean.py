@@ -131,7 +131,10 @@ class BooleanNode:
         return self.and_(self, other)
 
     def walk(self, f) -> "BooleanNode":
-        res = f(copy(self))
+        copied = copy(self)
+        res = f(copied)
+        if res is None:
+            res = copied
         if res._children:
             res._children = [child.walk(f) for child in res.children]
         return res

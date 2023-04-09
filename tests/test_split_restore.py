@@ -15,6 +15,16 @@ def test_split_and():
     assert (49 + 97 + 98) % 101 == 42
     assert conf.restore(splitted) == 42
 
+def test_split_small_threshold():
+    conf = Configuration(modulo=101, formula="T2(a, b, c)")
+    splitted = conf.split(42, seed=0)
+    assert splitted == [
+        Part("a", [91]),
+        Part("b", [39]),
+        Part("c", [88])
+    ]
+    assert conf.restore(splitted) == 42
+
 
 def test_split_threshold():
     conf = Configuration(modulo=101, formula="T3(a, b, c, d, e)")
