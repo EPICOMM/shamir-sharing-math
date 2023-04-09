@@ -1,7 +1,8 @@
 from collections import Counter
 from dataclasses import dataclass
-from enum import Enum
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
+import json
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 
 from .boolean import BooleanNode, NodeKind
 import random
@@ -14,12 +15,30 @@ class Part:
     name: str
     values: list[int]
 
+    def serialize(self) -> str:
+        data = {'name': self.name, 'values': self.values}
+        return urlsafe_b64encode(json.dumps(data, ensure_ascii=False).encode('utf-8'))
+
+    @classmethod
+    def deserialize(cls, s: str) -> 'Part':
+        data = json.loads(urlsafe_b64encode(s).decode('utf-8'))
+        return cls(name=data['name'], values=data['values'])
+
 
 @dataclass(kw_only=True)
 class Configuration:
     modulo: int
     formula: str
     version: int = 1
+
+    def serialize(self) -> str:
+        data = {'modulo': self.modulo, 'formula': self.formula, 'version': self.version}
+        return urlsafe_b64encode(json.dumps(data, ensure_ascii=False).encode('utf-8'))
+
+    @classmethod
+    def deserialize(cls, s: str) -> 'Part':
+        data = json.loads(urlsafe_b64encode(s).decode('utf-8'))
+        return cls(modulo=data['modulo'], formula=data['formula'], version=data['version'])
 
     def make_formula(self) -> BooleanNode:
         formula: BooleanNode = self.formula  # TODO: parse it
@@ -44,7 +63,7 @@ class Configuration:
             assert idx - 1 == len(result[name].values)
             result[name].values.append(val)
         return list(result.values())
-    
+
     def restore(self, parts: list[Part]) -> int | None:
         formula = self.make_formula()
         vals = {}
@@ -52,6 +71,9 @@ class Configuration:
             for idx, val in enumerate(part.values, 1):
                 vals[(part.name, idx)] = val
         return Restorer(self, vals).restore(formula)
+
+    def modify(self, new: 'Configuration', parts: list[Part]) -> list[Part]:
+        pass
 
 
 class MathBase:
@@ -195,3 +217,8 @@ class Restorer(MathBase):
                 result += restored
                 result %= self.mod
             return result
+
+
+class Editor(MathBase):
+    def modify(self, conf: Configuration, parts: list[Part]) -> list[Part]:
+        pass
