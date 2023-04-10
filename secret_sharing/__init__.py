@@ -53,12 +53,14 @@ class Configuration:
             return node
 
         return formula.walk(walker)
-    
+
     def names(self) -> set[str]:
         result = set()
+
         def walker(node: BooleanNode):
             if node.kind == NodeKind.VAR:
                 result.add(node.name)
+
         parse(self.formula).walk(walker)
         return result
 
@@ -94,10 +96,12 @@ class Configuration:
         for part in parts:
             for idx, val in enumerate(part.values, 1):
                 assigned[(part.name, idx)] = val
+
         def visitor(f: BooleanNode):
             if f.kind == NodeKind.VAR:
                 if f.name not in assigned:
                     assigned[f.name] = None
+
         self.make_formula().walk(visitor)
         print(assigned)
         return new.split(secret, seed=seed, assigned=assigned)
@@ -160,7 +164,7 @@ class Splitter(MathBase):
             if self.assigned[key] is None:
                 raise ValueError(f"can't assign random value to {key}, but required to")
             else:
-                print(f'changing value for {val}')
+                print(f"changing value for {val}")
         self.assigned[key] = val
 
     def _try_restore_poly(self, f: BooleanNode) -> list[int] | None:
@@ -215,7 +219,7 @@ class Splitter(MathBase):
             if not subsecret:
                 free.append(child)
                 continue
-            print(f'{child} = {subsecret}')
+            print(f"{child} = {subsecret}")
             summ += subsecret
             summ %= self.mod
             self.split(subsecret, child, is_random=is_random)
