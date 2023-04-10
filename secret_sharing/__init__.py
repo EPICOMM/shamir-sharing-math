@@ -125,33 +125,14 @@ class MathBase:
         return [self.rand() for _ in range(n)]
 
     def inv(self, n: int) -> int:
-        n = n % self.mod
-        m = self.mod
-        m0 = self.mod
-        y = 0
-        x = 1
-
+        n, m = n % self.mod, self.mod
+        x, y = 1, 0
         while n > 1:
-            # q is quotient
             q = n // m
+            n, m = m, n % m
+            x, y = y, x - q * y
 
-            t = m
-
-            # m is remainder now, process
-            # same as Euclid's algo
-            m = n % m
-            n = t
-            t = y
-
-            # Update x and y
-            y = x - q * y
-            x = t
-
-        # Make x positive
-        if x < 0:
-            x = x + m0
-
-        return x
+        return x % self.mod
 
 
 class Splitter(MathBase):
