@@ -53,6 +53,14 @@ class Configuration:
             return node
 
         return formula.walk(walker)
+    
+    def names(self) -> set[str]:
+        result = set()
+        def walker(node: BooleanNode):
+            if node.kind == NodeKind.VAR:
+                result.add(node.name)
+        parse(self.formula).walk(walker)
+        return result
 
     def split(self, secret: int, seed=None, assigned=None) -> list[Part]:
         formula = self.make_formula()
