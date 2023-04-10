@@ -109,7 +109,7 @@ class MathBase:
             if self._rng:
                 return self._rng.randint(0, self.mod - 1)
             else:
-                return secrets.randbelow(0, self.mod)
+                return secrets.randbelow(self.mod)
         return [self.rand() for _ in range(n)]
 
     def inv(self, n: int) -> int:
