@@ -10,7 +10,6 @@ def test_add_to_or():
 
 
 def test_remove_from_or():
-    # TODO: this is not secure and cannot be
     before = Configuration(modulo=101, formula="a | b | c")
     new = Configuration(modulo=101, formula="a | b")
     parts = [Part("a", [42])]
@@ -19,7 +18,6 @@ def test_remove_from_or():
 
 
 def test_add_to_and():
-    # TODO: `a` alone is able to do that, but we currently require to be able to restore a secret
     before = Configuration(modulo=101, formula="a & b")
     new = Configuration(modulo=101, formula="a & b & c")
     parts = [Part("a", [0]), Part("b", [42])]
@@ -29,7 +27,6 @@ def test_add_to_and():
 
 
 def test_remove_from_and():
-    # TODO: This is not working currently :(
     before = Configuration(modulo=101, formula="a & b & c")
     new = Configuration(modulo=101, formula="a & b")
     parts = [Part("a", [17]), Part("b", [42]), Part("c", [84])]
@@ -47,9 +44,8 @@ def test_add_to_threshold():
 
 
 def test_remove_from_threshold():
-    # TODO: This is not secure, but should be
     before = Configuration(modulo=101, formula="T3(a, b, c, d, e)")
     new = Configuration(modulo=101, formula="T3(a, b, c, d)")
     parts = [Part("a", [87]), Part("b", [23]), Part("c", [52]), Part("d", [73])]  # e is 86
     after = before.modify(new, parts, seed=1)
-    assert after == [Part("a", [87]), Part("b", [23]), Part("c", [52]), Part("d", [73])]
+    assert after == [Part("a", [87]), Part("b", [23]), Part("c", [52]), Part("d", [73]), Part("e", [None])]
